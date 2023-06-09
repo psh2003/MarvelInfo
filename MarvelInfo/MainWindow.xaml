@@ -1,0 +1,24 @@
+﻿<Window x:Class="MarvelInfo.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:MarvelInfo"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="800">
+    <Grid>
+        <StackPanel Orientation="Vertical" Margin="10">
+            <Button Content="Load Next Movie" Click="LoadMoviesButton_Click" Margin="0 0 0 10"/>
+            <StackPanel Orientation="Horizontal" Margin="0 0 0 10">
+                <TextBox x:Name="SearchTextBox" Width="200" Margin="0 0 10 0"/>
+                <Button Content="Search" Click="SearchButton_Click"/>
+            </StackPanel>
+            <Image x:Name="img" Width="110" />
+            <TextBlock x:Name="imgTxt" 
+    HorizontalAlignment="Center" 
+    VerticalAlignment="Center" />
+            <ListBox x:Name="MoviesListBox" DisplayMemberPath="Title" Margin="0 0 0 10"/>
+            <ListBox x:Name="CharactersListBox" DisplayMemberPath="Name"/>
+        </StackPanel>
+    </Grid>
+</Window>
