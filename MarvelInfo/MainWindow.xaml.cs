@@ -16,6 +16,10 @@ using System.IO;
 using System.Net;
 using System.ComponentModel;
 using System.Drawing;
+using System.Runtime.InteropServices.ComTypes;
+using System.Windows.Media.Media3D;
+using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace MarvelInfo
 {
@@ -24,7 +28,7 @@ namespace MarvelInfo
         private const string NextMarvelFilmEndpoint = "https://www.whenisthenextmcufilm.com/api";
         private const string MarvelAPIEndpoint = "https://gateway.marvel.com:443/v1/public/series?";
         private const string MarvelAPIEndpoint2 = "https://gateway.marvel.com:443/v1/public/characters?";
-        private const string MarvelAPIEndpoint3 = "https://gateway.marvel.com:443/v1/public/series?";
+        private const string MarvelAPIEndpoint3 = "https://gateway.marvel.com:443/v1/public/events?";
         private const string apiKey = "69b2dcec13e3059839e0e7a5b957efd9";
         private const string hash = "37c882cceb8777d6616fe502f276c39c396d23ae";
 
@@ -98,12 +102,12 @@ namespace MarvelInfo
 
 
                 // Marvel API를 사용하여 검색 결과 가져오기
-                List<MarvelApiResponseData> characters = await SearchMarvelCharacters(nextMarvelFilm.title);
+                List<Comics> characters = await SearchMarvelComics(nextMarvelFilm.title);
 
                 // 검색 결과를 ListBox에 표시
                 /*CharactersListBox.ItemsSource = characters;*/
-
-                foreach (MarvelApiResponseData a in characters)
+                Board.Clear();
+                foreach (Comics a in characters)
                 {
                     var fullFilePath = @a.thumbnail["path"] + "." + a.thumbnail["extension"];
 
@@ -126,13 +130,51 @@ namespace MarvelInfo
             {
                 // 텍스트 박스에서 검색어 가져오기
                 string searchTerm = SearchTextBox.Text;
-
+                BitmapImage bitmap = new BitmapImage();
+                Board.Clear();
                 // Marvel API를 사용하여 검색 결과 가져오기
-                var characters = await SearchMarvelCharacters(searchTerm);
+                switch (combo.Text)
+                {
+                    case "캐릭터":
+                        List<Character> character = await SearchMarvelCharacter(searchTerm);
+                        foreach (Character a in character)
+                        {
+                            var fullFilePath = @a.thumbnail["path"] + "." + a.thumbnail["extension"];
 
-                // 검색 결과를 ListBox에 표시
-                /*CharactersListBox.ItemsSource = characters;*/
-                
+                            bitmap = new BitmapImage();
+                            bitmap.BeginInit();
+                            bitmap.UriSource = new Uri(fullFilePath, UriKind.Absolute);
+                            bitmap.EndInit();
+                            Board.Add(new items() { Title = a.name, ImageData = bitmap, Description = a.description });
+                        }
+                        break;
+                    case "사건":
+                        List<Event> _event = await SearchMarvelEvent(searchTerm);
+                        foreach (Event a in _event)
+                        {
+                            var fullFilePath = @a.thumbnail["path"] + "." + a.thumbnail["extension"];
+
+                            bitmap = new BitmapImage();
+                            bitmap.BeginInit();
+                            bitmap.UriSource = new Uri(fullFilePath, UriKind.Absolute);
+                            bitmap.EndInit();
+                            Board.Add(new items() { Title = a.title, ImageData = bitmap, Description = a.description });
+                        }
+                        break;
+                    case "코믹스":
+                        List<Comics> comics = await SearchMarvelComics(searchTerm);
+                        foreach (Comics a in comics)
+                        {
+                            var fullFilePath = @a.thumbnail["path"] + "." + a.thumbnail["extension"];
+
+                            bitmap = new BitmapImage();
+                            bitmap.BeginInit();
+                            bitmap.UriSource = new Uri(fullFilePath, UriKind.Absolute);
+                            bitmap.EndInit();
+                            Board.Add(new items() { Title = a.title, ImageData = bitmap, Description = a.description });
+                        }
+                        break;
+                }               
             }
             catch (Exception ex)
             {
@@ -153,12 +195,12 @@ namespace MarvelInfo
             return nextFilm;
         }
 
-        private async Task<List<MarvelApiResponseData>> SearchMarvelCharacters(string searchTerm)
+        private async Task<List<Comics>> SearchMarvelComics(string searchTerm)
         {
             long ts = ((DateTimeOffset)DateTime.Now).ToUnixTimeSeconds();
             string hash2 = GetMd5Hash(ts + hash + apiKey);
 
-            var response = await _httpClient.GetAsync($"{MarvelAPIEndpoint}ts={ts}&titleStartsWith={HttpUtility.UrlEncode(searchTerm, Encoding.UTF8)}&limit=10&apikey={apiKey}&hash={hash2}");
+            var response = await _httpClient.GetAsync($"{MarvelAPIEndpoint}ts={ts}&titleStartsWith={HttpUtility.UrlEncode(searchTerm, Encoding.UTF8)}&limit={limit.Text}&apikey={apiKey}&hash={hash2}");
 
             response.EnsureSuccessStatusCode();
 
@@ -167,9 +209,55 @@ namespace MarvelInfo
             var jsonObject = JsonDocument.Parse(json).RootElement;
             var data = jsonObject.GetProperty("data").GetProperty("results");
 
-            var characters = JsonSerializer.Deserialize<List<MarvelApiResponseData>>(data);
+            var characters = JsonSerializer.Deserialize<List<Comics>>(data);
 
             return characters;
+        }
+
+        private async Task<List<Character>> SearchMarvelCharacter(string searchTerm)
+        {
+            long ts = ((DateTimeOffset)DateTime.Now).ToUnixTimeSeconds();
+            string hash2 = GetMd5Hash(ts + hash + apiKey);
+
+            var response = await _httpClient.GetAsync($"{MarvelAPIEndpoint2}ts={ts}&nameStartsWith={HttpUtility.UrlEncode(searchTerm, Encoding.UTF8)}&limit={limit.Text}&apikey={apiKey}&hash={hash2}");
+
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadAsStringAsync();
+
+            var jsonObject = JsonDocument.Parse(json).RootElement;
+            var data = jsonObject.GetProperty("data").GetProperty("results");
+
+            var characters = JsonSerializer.Deserialize<List<Character>>(data);
+
+            return characters;
+        }
+
+        private async Task<List<Event>> SearchMarvelEvent(string searchTerm)
+        {
+            long ts = ((DateTimeOffset)DateTime.Now).ToUnixTimeSeconds();
+            string hash2 = GetMd5Hash(ts + hash + apiKey);
+
+            var response = await _httpClient.GetAsync($"{MarvelAPIEndpoint3}ts={ts}&nameStartsWith={HttpUtility.UrlEncode(searchTerm, Encoding.UTF8)}&limit={limit.Text}&apikey={apiKey}&hash={hash2}");
+
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadAsStringAsync();
+
+            var jsonObject = JsonDocument.Parse(json).RootElement;
+            var data = jsonObject.GetProperty("data").GetProperty("results");
+
+            var characters = JsonSerializer.Deserialize<List<Event>>(data);
+
+            return characters;
+        }
+
+        private void OnKeyDownHandler(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == Key.Return)
+            {
+                SearchButton_Click(sender, e);
+            }
         }
     }
 
@@ -183,7 +271,7 @@ namespace MarvelInfo
         public string type { get; set; }
     }
 
-    public class MarvelApiResponseData
+    public class Comics
     {
         public int id { get; set; }
         public string title { get; set; }
@@ -191,6 +279,20 @@ namespace MarvelInfo
         public int startYear { get; set; }
         public int endYear { get; set; }
         public string rating { get; set; }
+        public Dictionary<string, string> thumbnail { get; set; }
+    }
+
+    public class Character
+    {
+        public string name { get; set; }
+        public string description { get; set; }
+        public Dictionary<string, string> thumbnail { get; set; }
+    }
+
+    public class Event
+    {
+        public string title { get; set; }
+        public string description { get; set; }
         public Dictionary<string, string> thumbnail { get; set; }
     }
 
