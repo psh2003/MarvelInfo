@@ -20,15 +20,19 @@ using System.Runtime.InteropServices.ComTypes;
 using System.Windows.Media.Media3D;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Web.UI.WebControls;
+using System.Runtime.InteropServices;
+using System.Windows.Interop;
+using System.Diagnostics;
 
 namespace MarvelInfo
 {
     public partial class MainWindow : Window, INotifyPropertyChanged
     {
         private const string NextMarvelFilmEndpoint = "https://www.whenisthenextmcufilm.com/api";
-        private const string MarvelAPIEndpoint = "https://gateway.marvel.com:443/v1/public/series?";
-        private const string MarvelAPIEndpoint2 = "https://gateway.marvel.com:443/v1/public/characters?";
-        private const string MarvelAPIEndpoint3 = "https://gateway.marvel.com:443/v1/public/events?";
+        private const string MarvelAPIEndpoint = "https://gateway.marvel.com:443/v1/public/series?orderBy=-modified&";
+        private const string MarvelAPIEndpoint2 = "https://gateway.marvel.com:443/v1/public/characters?orderBy=-modified&";
+        private const string MarvelAPIEndpoint3 = "https://gateway.marvel.com:443/v1/public/events?orderBy=-modified&";
         private const string apiKey = "69b2dcec13e3059839e0e7a5b957efd9";
         private const string hash = "37c882cceb8777d6616fe502f276c39c396d23ae";
 
@@ -102,12 +106,11 @@ namespace MarvelInfo
 
 
                 // Marvel API를 사용하여 검색 결과 가져오기
-                List<Comics> characters = await SearchMarvelComics(nextMarvelFilm.title);
+                List<Comics> comics = await SearchMarvelComics(nextMarvelFilm.title);
 
                 // 검색 결과를 ListBox에 표시
-                /*CharactersListBox.ItemsSource = characters;*/
                 Board.Clear();
-                foreach (Comics a in characters)
+                foreach (Comics a in comics)
                 {
                     var fullFilePath = @a.thumbnail["path"] + "." + a.thumbnail["extension"];
 
@@ -115,7 +118,7 @@ namespace MarvelInfo
                     bitmap.BeginInit();
                     bitmap.UriSource = new Uri(fullFilePath, UriKind.Absolute);
                     bitmap.EndInit();
-                    Board.Add(new items() { Title = a.title, ImageData = bitmap, Description = a.description});
+                    Board.Add(new items() { Title = a.title, ImageData = bitmap, Description = a.description, Path = a.urls[a.urls.Count - 1]["url"] });
                 }
             }
             catch (Exception ex)
@@ -130,6 +133,12 @@ namespace MarvelInfo
             {
                 // 텍스트 박스에서 검색어 가져오기
                 string searchTerm = SearchTextBox.Text;
+                if (searchTerm.Length < 1)
+                {
+                    MessageBoxHelper.PrepToCenterMessageBoxOnForm(this);    
+                    MessageBox.Show("검색어를 입력해주세요.");
+                    return;
+                }
                 BitmapImage bitmap = new BitmapImage();
                 Board.Clear();
                 // Marvel API를 사용하여 검색 결과 가져오기
@@ -145,7 +154,7 @@ namespace MarvelInfo
                             bitmap.BeginInit();
                             bitmap.UriSource = new Uri(fullFilePath, UriKind.Absolute);
                             bitmap.EndInit();
-                            Board.Add(new items() { Title = a.name, ImageData = bitmap, Description = a.description });
+                            Board.Add(new items() { Title = a.name, ImageData = bitmap, Description = a.description, Path = a.urls[a.urls.Count-1]["url"] });
                         }
                         break;
                     case "사건":
@@ -158,7 +167,7 @@ namespace MarvelInfo
                             bitmap.BeginInit();
                             bitmap.UriSource = new Uri(fullFilePath, UriKind.Absolute);
                             bitmap.EndInit();
-                            Board.Add(new items() { Title = a.title, ImageData = bitmap, Description = a.description });
+                            Board.Add(new items() { Title = a.title, ImageData = bitmap, Description = a.description, Path = a.urls[a.urls.Count - 1]["url"] });
                         }
                         break;
                     case "코믹스":
@@ -171,7 +180,7 @@ namespace MarvelInfo
                             bitmap.BeginInit();
                             bitmap.UriSource = new Uri(fullFilePath, UriKind.Absolute);
                             bitmap.EndInit();
-                            Board.Add(new items() { Title = a.title, ImageData = bitmap, Description = a.description });
+                            Board.Add(new items() { Title = a.title, ImageData = bitmap, Description = a.description, Path = a.urls[a.urls.Count - 1]["url"] });
                         }
                         break;
                 }               
@@ -259,6 +268,14 @@ namespace MarvelInfo
                 SearchButton_Click(sender, e);
             }
         }
+
+        private void HandleLinkClick(object sender, RoutedEventArgs e)
+        {
+            Hyperlink hl = (Hyperlink)sender;
+            string navigateUri = hl.NavigateUri.ToString();
+            Process.Start(new ProcessStartInfo(navigateUri));
+            e.Handled = true;
+        }
     }
 
     public class NextMarvelFilm
@@ -279,6 +296,7 @@ namespace MarvelInfo
         public int startYear { get; set; }
         public int endYear { get; set; }
         public string rating { get; set; }
+        public List<Dictionary<string, string>> urls { get; set; }
         public Dictionary<string, string> thumbnail { get; set; }
     }
 
@@ -287,6 +305,7 @@ namespace MarvelInfo
         public string name { get; set; }
         public string description { get; set; }
         public Dictionary<string, string> thumbnail { get; set; }
+        public List<Dictionary<string, string>> urls { get; set; }
     }
 
     public class Event
@@ -294,6 +313,7 @@ namespace MarvelInfo
         public string title { get; set; }
         public string description { get; set; }
         public Dictionary<string, string> thumbnail { get; set; }
+        public List<Dictionary<string, string>> urls { get; set; }
     }
 
     public class items
@@ -301,6 +321,86 @@ namespace MarvelInfo
         public BitmapImage ImageData { get; set; }
         public string Title { get; set; }
         public string Description { get; set; }
+        public string Path { get; set; }
     }
 
+    internal static class MessageBoxHelper
+    {
+        internal static void PrepToCenterMessageBoxOnForm(Window form)
+        {
+            MessageBoxCenterHelper helper = new MessageBoxCenterHelper();
+            helper.Prep(form);
+        }
+
+        private class MessageBoxCenterHelper
+        {
+            private int messageHook;
+            private IntPtr parentFormHandle;
+
+            public void Prep(Window form)
+            {
+                NativeMethods.CenterMessageCallBackDelegate callBackDelegate = new NativeMethods.CenterMessageCallBackDelegate(CenterMessageCallBack);
+                GCHandle.Alloc(callBackDelegate);
+
+                parentFormHandle = new WindowInteropHelper(form).Handle;
+                messageHook = NativeMethods.SetWindowsHookEx(5, callBackDelegate, new IntPtr(NativeMethods.GetWindowLong(parentFormHandle, -6)), NativeMethods.GetCurrentThreadId()).ToInt32();
+            }
+
+            private int CenterMessageCallBack(int message, int wParam, int lParam)
+            {
+                NativeMethods.RECT formRect;
+                NativeMethods.RECT messageBoxRect;
+                int xPos;
+                int yPos;
+
+                if (message == 5)
+                {
+                    NativeMethods.GetWindowRect(parentFormHandle, out formRect);
+                    NativeMethods.GetWindowRect(new IntPtr(wParam), out messageBoxRect);
+
+                    xPos = (int)((formRect.Left + (formRect.Right - formRect.Left) / 2) - ((messageBoxRect.Right - messageBoxRect.Left) / 2));
+                    yPos = (int)((formRect.Top + (formRect.Bottom - formRect.Top) / 2) - ((messageBoxRect.Bottom - messageBoxRect.Top) / 2));
+
+                    NativeMethods.SetWindowPos(wParam, 0, xPos, yPos, 0, 0, 0x1 | 0x4 | 0x10);
+                    NativeMethods.UnhookWindowsHookEx(messageHook);
+                }
+
+                return 0;
+            }
+        }
+
+        private static class NativeMethods
+        {
+            internal struct RECT
+            {
+                public int Left;
+                public int Top;
+                public int Right;
+                public int Bottom;
+            }
+
+            internal delegate int CenterMessageCallBackDelegate(int message, int wParam, int lParam);
+
+            [DllImport("user32.dll")]
+            [return: MarshalAs(UnmanagedType.Bool)]
+            internal static extern bool UnhookWindowsHookEx(int hhk);
+
+            [DllImport("user32.dll", SetLastError = true)]
+            internal static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+
+            [DllImport("kernel32.dll")]
+            internal static extern int GetCurrentThreadId();
+
+            [DllImport("user32.dll", SetLastError = true)]
+            internal static extern IntPtr SetWindowsHookEx(int hook, CenterMessageCallBackDelegate callback, IntPtr hMod, int dwThreadId);
+
+            [DllImport("user32.dll")]
+            [return: MarshalAs(UnmanagedType.Bool)]
+            internal static extern bool SetWindowPos(int hWnd, int hWndInsertAfter, int X, int Y, int cx, int cy, int uFlags);
+
+            [DllImport("user32.dll")]
+            [return: MarshalAs(UnmanagedType.Bool)]
+            internal static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+        }
+    }
 }
