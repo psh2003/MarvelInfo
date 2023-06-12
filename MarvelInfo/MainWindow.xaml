@@ -40,7 +40,7 @@
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0 10 0 0">
                         <TextBlock Text="개봉일" Width="60" TextAlignment="Center" FontWeight="Bold"/>
-                        <TextBlock x:Name="releaseDate" Width="200" TextWrapping="Wrap"/>
+                        <TextBlock x:Name="releaseDate" Width="200" TextWrapping="Wrap" MouseLeftButtonUp="ReleaseAlarm"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0 10 0 0">
                         <TextBlock Text="남은 일 수" Width="60" TextAlignment="Center" FontWeight="Bold"/>

@@ -24,6 +24,11 @@ using System.Web.UI.WebControls;
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
 using System.Diagnostics;
+using System.Xml;
+using System.Windows.Forms;
+using System.Runtime.Remoting.Contexts;
+using MessageBox = System.Windows.MessageBox;
+using Microsoft.Win32.TaskScheduler;
 
 namespace MarvelInfo
 {
@@ -156,6 +161,10 @@ namespace MarvelInfo
                             bitmap.EndInit();
                             Board.Add(new items() { Title = a.name, ImageData = bitmap, Description = a.description, Path = a.urls[a.urls.Count-1]["url"] });
                         }
+                        if (character.Count < 1)
+                        {
+                            Board.Add(new items() { Title = "검색결과가 없습니다." });
+                        }
                         break;
                     case "사건":
                         List<Event> _event = await SearchMarvelEvent(searchTerm);
@@ -275,6 +284,32 @@ namespace MarvelInfo
             string navigateUri = hl.NavigateUri.ToString();
             Process.Start(new ProcessStartInfo(navigateUri));
             e.Handled = true;
+        }
+
+        private void ReleaseAlarm(object sender, MouseButtonEventArgs e)
+        {
+            // 토스트 알림 표시
+            using (TaskService taskService = new TaskService())
+            {
+                // 작업 생성
+                TaskDefinition taskDefinition = taskService.NewTask();
+                taskDefinition.RegistrationInfo.Description = "알림 작업";
+
+                // 트리거 생성
+                TimeTrigger trigger = new TimeTrigger(Convert.ToDateTime(releaseDate.Text));
+                taskDefinition.Triggers.Add(trigger);
+
+                // 액션 생성
+                string appPath = Process.GetCurrentProcess().MainModule.FileName;
+                string appDir = Path.GetDirectoryName(appPath);
+                string appExe = Path.GetFileName(appPath);
+                string imagePath = "../../marvel.ico";
+                string arguments = $"/showNotification \"{imgTxt.Text + "이(가) 개봉하였습니다."}\" \"{"예매ㄱㄱ"}\" \"{img.Source}\"";
+                taskDefinition.Actions.Add(new ExecAction(appExe, arguments, appDir));
+
+                // 작업 등록
+                taskService.RootFolder.RegisterTaskDefinition("알림작업", taskDefinition);
+            }
         }
     }
 
