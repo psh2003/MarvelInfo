@@ -17,7 +17,7 @@ namespace MarvelInfo
     /// </summary>
     public partial class App : Application
     {
-        private NotifyIcon notifyIcon = new NotifyIcon();
+        private NotifyIcon notifyIcon;
         protected override void OnStartup(StartupEventArgs e)
         {
             // 시스템 트레이 아이콘 초기화
@@ -38,8 +38,6 @@ namespace MarvelInfo
                     notifyIcon.BalloonTipTitle = title;
                     notifyIcon.BalloonTipText = content;
                     notifyIcon.ShowBalloonTip(5000);
-                    /*notifyIcon.ShowBalloonTip(5000, "test", "test", ToolTipIcon.Info);*/
-
                 }
 
                 // 알림 표시 후 앱 종료

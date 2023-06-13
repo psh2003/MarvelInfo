@@ -303,12 +303,15 @@ namespace MarvelInfo
                 string appPath = Process.GetCurrentProcess().MainModule.FileName;
                 string appDir = Path.GetDirectoryName(appPath);
                 string appExe = Path.GetFileName(appPath);
-                string imagePath = "../../marvel.ico";
-                string arguments = $"/showNotification \"{imgTxt.Text + "이(가) 개봉하였습니다."}\" \"{"예매ㄱㄱ"}\" \"{img.Source}\"";
+                string arguments = $"/showNotification \"{imgTxt.Text + "이(가) 개봉하였습니다."}\" \"{"예매ㄱㄱ"}\" \"{img.Source}\" -AllowStartIfOnBatteries";
                 taskDefinition.Actions.Add(new ExecAction(appExe, arguments, appDir));
-
+                //전원이 연결되어 있지 않을 경우 실행되지 않는걸 방지
+                taskDefinition.Settings.StopIfGoingOnBatteries = false;
+                taskDefinition.Settings.DisallowStartIfOnBatteries = false;
                 // 작업 등록
                 taskService.RootFolder.RegisterTaskDefinition("알림작업", taskDefinition);
+                MessageBoxHelper.PrepToCenterMessageBoxOnForm(this);
+                MessageBox.Show("알림이 등록되었습니다.");
             }
         }
     }
