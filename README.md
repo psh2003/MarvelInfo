@@ -24,7 +24,7 @@ This section should list any major frameworks/libraries used to bootstrap your p
 
 Use this space to list resources you find helpful and would like to give credit to. I've included a few of my favorites to kick things off!
 
-* [Choose an Open Source License](https://developer.marvel.com/)
+* [THE WORLD'S GREATEST COMIC API](https://developer.marvel.com/)
 * [MCU-Countdown](https://github.com/DiljotSG/MCU-Countdown)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
